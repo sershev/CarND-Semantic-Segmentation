@@ -43,7 +43,7 @@ def load_vgg(sess, vgg_path):
     layer7 = graph.get_tensor_by_name(vgg_layer7_out_tensor_name)
     
     return w1, keep, layer3, layer4, layer7
-# tests.test_load_vgg(load_vgg, tf)
+tests.test_load_vgg(load_vgg, tf)
 
 
 def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
@@ -70,7 +70,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     out = tf.layers.conv2d_transpose(out, num_classes, 16, strides=(8,8), padding='same', kernel_initializer=tf.truncated_normal_initializer(stddev=1e-2), kernel_regularizer=tf.contrib.layers.l2_regularizer(reg_value))
 
     return out
-# tests.test_layers(layers)
+tests.test_layers(layers)
 
 
 def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
@@ -90,7 +90,7 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     optimizer = tf.train.AdamOptimizer(learning_rate).minimize(cross_entropy_loss)
 
     return logits, optimizer, cross_entropy_loss
-# tests.test_optimize(optimize)
+tests.test_optimize(optimize)
 
 
 def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image,
@@ -117,7 +117,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
             _, loss = sess.run([train_op, cross_entropy_loss], feed_dict)
             print("Epoch: {} | Batch {} | Loss: {} ".format(epoch, batch, loss))
 
-# tests.test_train_nn(train_nn)
+tests.test_train_nn(train_nn)
 
 
 def run():
