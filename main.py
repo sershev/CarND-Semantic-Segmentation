@@ -55,18 +55,19 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :param num_classes: Number of classes to classify
     :return: The Tensor for the last layer of output
     """
+    reg_value = 1e-3
 
-    conv7_1_1 = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, 1, padding='same', kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
-    conv4_1_1 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, 1, padding='same', kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
-    conv3_1_1 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, 1, padding='same', kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+    conv7_1_1 = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, 1, padding='same', kernel_initializer=tf.truncated_normal_initializer(stddev=1e-2), kernel_regularizer=tf.contrib.layers.l2_regularizer(reg_value))
+    conv4_1_1 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, 1, padding='same', kernel_initializer=tf.truncated_normal_initializer(stddev=1e-2), kernel_regularizer=tf.contrib.layers.l2_regularizer(reg_value))
+    conv3_1_1 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, 1, padding='same', kernel_initializer=tf.truncated_normal_initializer(stddev=1e-2), kernel_regularizer=tf.contrib.layers.l2_regularizer(reg_value))
 
-    out = tf.layers.conv2d_transpose(conv7_1_1, num_classes, 4, strides=(2,2), padding='same', kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+    out = tf.layers.conv2d_transpose(conv7_1_1, num_classes, 4, strides=(2,2), padding='same', kernel_initializer=tf.truncated_normal_initializer(stddev=1e-2), kernel_regularizer=tf.contrib.layers.l2_regularizer(reg_value))
     out = tf.add(out, conv4_1_1)
 
-    out = tf.layers.conv2d_transpose(out, num_classes, 4, strides=(2,2), padding='same', kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+    out = tf.layers.conv2d_transpose(out, num_classes, 4, strides=(2,2), padding='same', kernel_initializer=tf.truncated_normal_initializer(stddev=1e-2), kernel_regularizer=tf.contrib.layers.l2_regularizer(reg_value))
     out = tf.add(out, conv3_1_1)
 
-    out = tf.layers.conv2d_transpose(out, num_classes, 16, strides=(8,8), padding='same', kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+    out = tf.layers.conv2d_transpose(out, num_classes, 16, strides=(8,8), padding='same', kernel_initializer=tf.truncated_normal_initializer(stddev=1e-2), kernel_regularizer=tf.contrib.layers.l2_regularizer(reg_value))
 
     return out
 # tests.test_layers(layers)
@@ -107,10 +108,12 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     :param keep_prob: TF Placeholder for dropout keep probability
     :param learning_rate: TF Placeholder for learning rate
     """
+    kp = 0.5
+    lr = 0.003
 
     for epoch in range(epochs):
         for batch, (image, label) in enumerate(get_batches_fn(batch_size)):
-            feed_dict = { input_image: image, correct_label: label, keep_prob: 0.5, learning_rate: 0.0001 }
+            feed_dict = { input_image: image, correct_label: label, keep_prob: kp, learning_rate: lr }
             _, loss = sess.run([train_op, cross_entropy_loss], feed_dict)
             print("Epoch: {} | Batch {} | Loss: {} ".format(epoch, batch, loss))
 
@@ -132,6 +135,7 @@ def run():
     #  https://www.cityscapes-dataset.com/
 
     with tf.Session() as sess:
+        # For training on cpu if GPU has too low memory
         # with tf.device("/cpu:0"):
             # Path to vgg model
             vgg_path = os.path.join(data_dir, 'vgg')
@@ -141,8 +145,8 @@ def run():
             # OPTIONAL: Augment Images for better results
             #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
 
-            epoochs = 2
-            batch_size = 2
+            epoochs = 20
+            batch_size = 24
 
             learning_rate = tf.placeholder(tf.float32)
             correct_label = tf.placeholder(tf.int32, [None, None, None, num_classes])
@@ -155,6 +159,8 @@ def run():
 
             train_nn(sess, epoochs, batch_size, get_batches_fn, optimizer, cross_entropy_loss, input_image, correct_label, keep_prob, learning_rate)
 
+            saver = tf.train.Saver()
+            saver.save(sess, './models/semantic-segmentation-street-model')
             helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
 
             # OPTIONAL: Apply the trained model to a video
